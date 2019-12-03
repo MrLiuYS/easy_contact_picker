@@ -15,28 +15,28 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
 @end
 
 @implementation EasyContactPickerPlugin{
-  UIImagePickerController *_imagePickerController;
-  UIViewController *_viewController;
+    UIImagePickerController *_imagePickerController;
+    UIViewController *_viewController;
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-  FlutterMethodChannel* channel = [FlutterMethodChannel
-      methodChannelWithName:CHANNEL
-            binaryMessenger:[registrar messenger]];
+    FlutterMethodChannel* channel = [FlutterMethodChannel
+                                     methodChannelWithName:CHANNEL
+                                     binaryMessenger:[registrar messenger]];
     
-  UIViewController *viewController =
-  [UIApplication sharedApplication].delegate.window.rootViewController;
+    UIViewController *viewController =
+    [UIApplication sharedApplication].delegate.window.rootViewController;
     
-  EasyContactPickerPlugin* instance = [[EasyContactPickerPlugin alloc] initWithViewController:viewController];
-  [registrar addMethodCallDelegate:instance channel:channel];
+    EasyContactPickerPlugin* instance = [[EasyContactPickerPlugin alloc] initWithViewController:viewController];
+    [registrar addMethodCallDelegate:instance channel:channel];
 }
 
 - (instancetype)initWithViewController:(UIViewController *)viewController {
-  self = [super init];
-  if (self) {
-      _viewController = viewController;
-  }
-  return self;
+    self = [super init];
+    if (self) {
+        _viewController = viewController;
+    }
+    return self;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
@@ -55,12 +55,17 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
     else if ([METHOD_CALL_LIST isEqualToString:call.method]) {
         self.result = result;
         [self getContactArray];
+    } else if ([@"getContacts" isEqualToString:call.method] ) {
+        
+        result([self getContacts:call.arguments[@"query"]
+                  withThumbnails:[call.arguments[@"withThumbnails"]boolValue]]);
+        
     }
 }
 
 /// 打开通讯录
 - (void)openContactPickerVC{
-
+    
     CNContactPickerViewController *contactPicker = [[CNContactPickerViewController alloc] init];
     contactPicker.delegate = self;
     contactPicker.displayedPropertyKeys = @[CNContactPhoneNumbersKey];
@@ -76,12 +81,11 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
         NSString *name = [NSString stringWithFormat:@"%@%@",contactProperty.contact.familyName, contactProperty.contact.givenName];
         /// 电话
         NSString *phoneNumber = phoneNumberModel.stringValue;
-        phoneNumber = [phoneNumber stringByReplacingOccurrencesOfString:@"-" withString:@""];
         
         NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-                    [dict setObject:name forKey:@"fullName"];
-                    [dict setObject:phoneNumber forKey:@"phoneNumber"];
-                    self.result(dict);
+        [dict setObject:name forKey:@"fullName"];
+        [dict setObject:[phoneNumber stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] forKey:@"phoneNumber"];
+        self.result(dict);
     }];
 }
 
@@ -89,20 +93,20 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
 - (void)getContactArray{
     NSMutableArray *contacts = [[NSMutableArray alloc]initWithCapacity:1];
     CNContactStore *store = [[CNContactStore alloc] init];
-
-
+    
+    
     [store requestAccessForEntityType:CNEntityTypeContacts completionHandler:^(BOOL granted, NSError * _Nullable error) {
         if (granted) {
-
+            
             // 获取联系人仓库
             CNContactStore * store = [[CNContactStore alloc] init];
-
+            
             // 创建联系人信息的请求对象
             NSArray * keys = @[CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey, CNContactNamePrefixKey, CNContactPhoneticFamilyNameKey];
-
+            
             // 根据请求Key, 创建请求对象
             CNContactFetchRequest * request = [[CNContactFetchRequest alloc] initWithKeysToFetch:keys];
-
+            
             // 发送请求
             [store enumerateContactsWithFetchRequest:request error:nil usingBlock:^(CNContact * _Nonnull contact, BOOL * _Nonnull stop) {
                 ContactModel *contactModel = [[ContactModel alloc]init];
@@ -110,7 +114,7 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
                 NSString * givenName = contact.givenName;
                 // 获取姓氏
                 NSString * familyName = contact.familyName;
-
+                
                 contactModel.name = [NSString stringWithFormat:@"%@%@",familyName,givenName];
                 // 获取电话
                 NSArray * phoneArray = contact.phoneNumbers;
@@ -134,23 +138,23 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
 
 - (NSArray<NSMutableDictionary *>*)handleContactObjects:(NSArray<ContactModel *> *)contactObjects groupingByKeyPath:(NSString *)keyPath sortInGroupKeyPath:(NSString *)sortInGroupkeyPath
 {
-
+    
     UILocalizedIndexedCollation * localizedCollation = [UILocalizedIndexedCollation currentCollation];
-
+    
     //初始化数组返回的数组
     NSMutableArray <NSMutableArray *> * contacts = [NSMutableArray arrayWithCapacity:0];
-
+    
     /// 注:
     /// 为什么不直接用27，而用count呢，这里取决于初始化方式
     /// 初始化方式为[[Class alloc] init],那么这个count = 0
     /// 初始化方式为[Class currentCollation],那么这个count = 27
-
+    
     //根据UILocalizedIndexedCollation的27个Title放入27个存储数据的数组
     for (NSInteger i = 0; i < localizedCollation.sectionTitles.count; i++)
     {
         [contacts addObject:[NSMutableArray arrayWithCapacity:0]];
     }
-
+    
     //开始遍历联系人对象，进行分组
     for (ContactModel * contactObject in contactObjects)
     {
@@ -161,7 +165,7 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
         //根据索引在相应的数组上添加数据
         [contacts[section] addObject:contactObject];
     }
-
+    
     //对每个同组的联系人进行排序
     for (NSInteger i = 0; i < localizedCollation.sectionTitles.count; i++)
     {
@@ -171,9 +175,9 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
         NSSortDescriptor * sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:sortInGroupkeyPath ascending:true];
         [tempMutableArray sortUsingDescriptors:@[sortDescriptor]];
         contacts[i] = tempMutableArray;
-
+        
     }
-
+    
     //新建一个temp空的数组（目的是为了在调用enumerateObjectsUsingBlock函数的时候把空的数组添加到这个数组里，
     //在将数据源空数组移除，或者在函数调用的时候进行判断，空的移除）
     NSMutableArray *temp = [NSMutableArray new];
@@ -184,7 +188,7 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
     }];
     //移除空数组
     [contacts removeObjectsInArray:temp];
-
+    
     //最终返回的数据
     NSMutableArray* lastArray = [NSMutableArray arrayWithCapacity:1];
     [contacts enumerateObjectsUsingBlock:^(NSMutableArray * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
@@ -192,7 +196,7 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
         [obj enumerateObjectsUsingBlock:^(ContactModel *  _Nonnull model, NSUInteger idx, BOOL * _Nonnull stop) {
             NSMutableDictionary *dict = [NSMutableDictionary dictionary];
             [dict setObject:model.name  forKey:@"fullName"];
-            [dict setObject:model.phoneNumber forKey:@"phoneNumber"];
+            [dict setObject:model.phoneNumber  forKey:@"phoneNumber"];
             [dict setObject:model.firstLetter forKey:@"firstLetter"];
             [lastArray addObject:dict];
         }];
@@ -200,4 +204,159 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
     //返回
     return lastArray;
 }
+
+
+- (NSMutableArray *)getContacts:(NSString *)query withThumbnails:(BOOL)withThumbnails{
+    
+    NSMutableArray * contacts = [NSMutableArray array];
+    
+    CNContactStore *contactStore = [CNContactStore new];
+    
+    NSArray * keys = withThumbnails == true
+    ? @[[CNContactFormatter descriptorForRequiredKeysForStyle:CNContactFormatterStyleFullName],
+        CNContactEmailAddressesKey,
+        CNContactPhoneNumbersKey,
+        CNContactFamilyNameKey,
+        CNContactGivenNameKey,
+        CNContactMiddleNameKey,
+        CNContactNamePrefixKey,
+        CNContactNameSuffixKey,
+        CNContactPostalAddressesKey,
+        CNContactOrganizationNameKey,
+        CNContactThumbnailImageDataKey,
+        //CNContactNoteKey, //  iOS13被限制 导致获取失败
+        CNContactJobTitleKey]
+    : @[[CNContactFormatter descriptorForRequiredKeysForStyle:CNContactFormatterStyleFullName],
+        CNContactEmailAddressesKey,
+        CNContactPhoneNumbersKey,
+        CNContactFamilyNameKey,
+        CNContactGivenNameKey,
+        CNContactMiddleNameKey,
+        CNContactNamePrefixKey,
+        CNContactNameSuffixKey,
+        CNContactPostalAddressesKey,
+        CNContactOrganizationNameKey,
+        //CNContactNoteKey, //  iOS13被限制
+        CNContactJobTitleKey];
+    
+    CNContactFetchRequest *request = [[CNContactFetchRequest alloc] initWithKeysToFetch:keys];
+
+    [contactStore enumerateContactsWithFetchRequest:request error:nil usingBlock:^(CNContact * _Nonnull contact,BOOL * _Nonnull stop) {
+        
+        [contacts addObject:contact];
+        
+    }];
+    
+    NSMutableArray * result = [NSMutableArray array];
+    
+    for (CNContact * contact in contacts) {
+        
+        [result addObject:[self contactToDictionary:contact]];
+        
+    }
+    NSLog(@"result = %@", result);
+    
+    return result;
+}
+
+
+
+- (NSMutableDictionary *)contactToDictionary:(CNContact *)contact {
+    
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    
+    [result setObject:contact.identifier forKey:@"identifier"];
+    
+    NSString *displayName =[CNContactFormatter stringFromContact:contact style:CNContactFormatterStyleFullName];
+    
+    if(!displayName){
+        displayName = @"";
+    }
+    
+    [result setObject:displayName forKey:@"displayName"];
+    
+    [result setObject:contact.givenName forKey:@"givenName"];
+    
+    [result setObject:contact.familyName forKey:@"familyName"];
+    
+    [result setObject:contact.middleName forKey:@"middleName"];
+    
+    [result setObject:contact.namePrefix forKey:@"prefix"];
+    [result setObject:contact.nameSuffix forKey:@"suffix"];
+    [result setObject:contact.organizationName forKey:@"company"];
+    [result setObject:contact.jobTitle forKey:@"jobTitle"];
+    //[result setObject:contact.note forKey:@"note"];
+    
+    if ([contact isKeyAvailable:CNContactThumbnailImageDataKey]) {
+        NSData * avatarData = contact.thumbnailImageData;
+        if (avatarData) {
+            [result setObject:[FlutterStandardTypedData typedDataWithBytes:avatarData] forKey:@"avatar"];
+        }
+    }
+    
+    NSMutableArray *phoneNumbers = [NSMutableArray array];
+    
+    for (CNLabeledValue<CNPhoneNumber*> *phone in contact.phoneNumbers) {
+        NSMutableDictionary * phoneDictionary = [NSMutableDictionary dictionary];
+        [phoneDictionary setObject:phone.value.stringValue?:@"" forKey:@"value"];
+        [phoneDictionary setObject:@"other" forKey:@"label"];
+        
+        NSString * label = phone.label;
+        if (label) {
+             [phoneDictionary setObject:[CNLabeledValue<NSString*> localizedStringForLabel:label] forKey:@"label"];
+        }
+        
+        [phoneNumbers addObject:phoneDictionary];
+    }
+    
+    [result setObject:phoneNumbers forKey:@"phones"];
+    
+    NSMutableArray * emailAddresses = [NSMutableArray array];
+    
+    for (CNLabeledValue<NSString*> *email in contact.emailAddresses) {
+        NSMutableDictionary *emailDictionary = [NSMutableDictionary dictionary];
+        [emailDictionary setObject:email.value?:@"" forKey:@"value"];
+        
+        [emailDictionary setObject:@"other" forKey:@"label"];
+        NSString * label = email.label;
+        if (label) {
+            [emailDictionary setObject:[CNLabeledValue<NSString *> localizedStringForLabel:label] forKey:@"label"];
+        }
+        
+        
+        [emailAddresses addObject:emailDictionary];
+    }
+    
+    [result setObject:emailAddresses forKey:@"emails"];
+    
+    NSMutableArray * postalAddresses = [NSMutableArray array];
+    
+    for (CNLabeledValue<CNPostalAddress*> * address in contact.postalAddresses) {
+        
+        NSMutableDictionary *addressDictionary = [NSMutableDictionary dictionary];
+    
+        [addressDictionary setObject:@"" forKey:@"label"];
+        NSString * label = address.label;
+        if (label) {
+            [addressDictionary setObject:[CNLabeledValue<NSString *> localizedStringForLabel:label] forKey:@"label"];
+        }
+        
+        [addressDictionary setObject:address.value.street?:@"" forKey:@"street"];
+        [addressDictionary setObject:address.value.city?:@"" forKey:@"city"];
+        [addressDictionary setObject:address.value.postalCode?:@"" forKey:@"postcode"];
+        [addressDictionary setObject:address.value.state?:@"" forKey:@"region"];
+        [addressDictionary setObject:address.value.country?:@"" forKey:@"country"];
+        
+        
+        [postalAddresses addObject:addressDictionary];
+        
+    }
+    
+    [result setObject:postalAddresses forKey:@"postalAddresses"];
+    
+    
+    return result;
+}
+
+
 @end

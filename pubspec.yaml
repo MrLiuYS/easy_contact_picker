@@ -1,7 +1,7 @@
 name: easy_contact_picker
 description: A Flutter contact picker.Writted with pure dart, supported both iOS and Android.
-version: 0.0.1
-author: liuweilyy <848483588@qq.com>
+version: 0.0.2
+author: liuweilyy <loveweiless@gmail.com>
 homepage: https://github.com/liuweilyy/easy_contact_picker
 
 environment:
@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  path_provider: ^1.1.0
+  collection: ^1.14.11
+  quiver: '>=2.0.0 <3.0.0'
 
 dev_dependencies:
   flutter_test:
