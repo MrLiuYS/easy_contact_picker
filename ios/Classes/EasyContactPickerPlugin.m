@@ -254,7 +254,6 @@ NSString*const METHOD_CALL_LIST = @"selectContactList";
         [result addObject:[self contactToDictionary:contact]];
         
     }
-    NSLog(@"result = %@", result);
     
     return result;
 }
